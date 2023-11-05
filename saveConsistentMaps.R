@@ -30,7 +30,8 @@ saveConsistentMaps <- function(tf, baseRaster){
 ff <- c("/datathon/data/night-light.tif",
         "/datathon/data/biomass_ndvi.tiff",
         "/datathon/data/solar_potential/World_PVOUT_GISdata_LTAy_AvgDailyTotals_GlobalSolarAtlas-v2_GEOTIFF/PVOUT.tif",
-        "/datathon/data/gmtedSlope.tif")
+        "/datathon/data/gmtedSlope.tif",
+        "/datathon/data/population_data_pq/density.tif")
 for(i in ff){
   saveConsistentMaps(i, baseRaster)
   print(str_extract(i, "(?<=/)[^/]+(?=\\.tif)"))
