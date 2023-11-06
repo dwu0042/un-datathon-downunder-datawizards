@@ -1,4 +1,5 @@
 library(terra)
+library(raster)
 
 # Create base raster
 baseRaster = raster(ncols = 3600, nrows = 1800,
@@ -9,7 +10,7 @@ baseRaster = terra::rast(baseRaster)
 baseRaster$id = 1:(nrow(baseRaster)*ncol(baseRaster))
 baseRasterXY = xyFromCell(baseRaster, 1:ncell(baseRaster)) %>% 
   data.frame() %>% 
-  mutate(id = 1:nrow(baseRasterXY))
+  mutate(id = 1:nrow(.))
 
 # function
 saveConsistentMaps <- function(tf, baseRaster){
@@ -31,7 +32,8 @@ ff <- c("/datathon/data/night-light.tif",
         "/datathon/data/biomass_ndvi.tiff",
         "/datathon/data/solar_potential/World_PVOUT_GISdata_LTAy_AvgDailyTotals_GlobalSolarAtlas-v2_GEOTIFF/PVOUT.tif",
         "/datathon/data/gmtedSlope.tif",
-        "/datathon/data/population_data_pq/density.tif")
+        "/datathon/data/population_data_pq/density.tif",
+        "/datathon/data/population_data_pq/density_raw_grid.tif")
 for(i in ff){
   saveConsistentMaps(i, baseRaster)
   print(str_extract(i, "(?<=/)[^/]+(?=\\.tif)"))
