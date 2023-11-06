@@ -33,7 +33,8 @@ ff <- c("/datathon/data/night-light.tif",
         "/datathon/data/solar_potential/World_PVOUT_GISdata_LTAy_AvgDailyTotals_GlobalSolarAtlas-v2_GEOTIFF/PVOUT.tif",
         "/datathon/data/gmtedSlope.tif",
         "/datathon/data/population_data_pq/density.tif",
-        "/datathon/data/population_data_pq/density_raw_grid.tif")
+        "/datathon/data/population_data_pq/density_raw_grid.tif",
+        "/datathon/data/populationDen.tif")
 for(i in ff){
   saveConsistentMaps(i, baseRaster)
   print(str_extract(i, "(?<=/)[^/]+(?=\\.tif)"))
