@@ -1,0 +1,67 @@
+$picton-blue: #06b1ebff;
+$princeton-orange: #fc8f01ff;
+$orange-peel: #fba104ff;
+$ivory: #fdfef3ff;
+$rich-black: #001313ff;
+$berkeley-blue: #022c54ff;
+
+.color-lightblue {
+  color: $picton-blue;
+}
+
+.color-orange {
+  color: $princeton-orange;
+}
+
+.color-lightorange {
+  color: $orange-peel;
+}
+
+.color-black {
+  color: $rich-black;
+}
+
+.color-darkblue {
+  color: $berkeley-blue;
+}
+
+#uisidebar {
+  padding: 2em;
+}
+
+.dashboard-body {
+  height: 90vh;
+}
+
+body:not(.no-margin) {
+  padding: 0 !important;
+}
+
+.ui.inverted.menu {
+  color: white;
+}
+
+.leaflet {
+  height: 100% !important;
+}
+
+.dashboard-header {
+  padding: 0.9em;
+}
+
+.marker-cluster-small, 
+.marker-cluster-small div, 
+.marker-cluster-medium, 
+.marker-cluster-medium div, 
+.marker-cluster-large, 
+.marker-cluster-large div {
+  background-color: white !important;
+  color: "transparent"
+}
+
+.marker-cluster-small div span,
+.marker-cluster-medium div span,
+.marker-cluster-large div span
+{
+  display: none;
+}
