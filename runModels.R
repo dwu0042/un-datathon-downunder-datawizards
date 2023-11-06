@@ -50,3 +50,19 @@ sub_cov$pred = full_predict$predictions
 write_csv(dplyr::select(covariates, x, y, id, pred), "/datathon/data/parsed_datafiles/predictions.csv")
 
 ## END SCRIPT ## ---------------------------------------------------------------
+
+sub_cov %>% 
+  #sample_frac(prop = 0.3) %>% 
+  ggplot(aes(y = y, x = x, fill = pred))+
+  geom_tile()+
+  theme_void()+
+  scale_fill_viridis_c(option = "G")+
+  theme(legend.position = "bottom")+
+  labs(fill = "Power Ratio")
+ggsave("/datathon/data/stateoftheart.png", dpi = 600,
+       width = 3000, height = 1500, units = "px")
+
+
+
+
+
