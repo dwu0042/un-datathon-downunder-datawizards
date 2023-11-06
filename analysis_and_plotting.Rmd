@@ -1,0 +1,491 @@
+---
+title: "farhan_test"
+output: html_document
+date: "2023-11-04"
+---
+
+
+```{r}
+library(tidyverse)
+library(plotly)
+library(terra)
+library(caret)
+library(raster)
+library(maps)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(sf)
+library(leaflet)
+```
+
+```{r}
+solarData = read_csv("data/global_wind_solar_2020/global_solar_2020_WGS84.csv")
+
+solarData = solarData %>% 
+  filter(!is.na(power)) %>% 
+  mutate(powerRatio = power/panel.area)
+
+solarSf = st_as_sf(solarData, coords = c("X", "Y"), crs = 4326)
+
+```
+
+```{r}
+plot(solarData$panel.area)
+```
+
+
+
+```{r}
+intersection = inter %>% 
+  data.frame()
+
+
+intersection
+
+modelMat = data.frame(powerRatio = data[intersection$row.id, "powerRatio"],
+           nvdi = biomass$biomass_ndvi.tiff[intersection$col.id])
+
+
+
+modelMat %>% 
+  ggplot(aes(x = nvdi, y = powerRatio)) +
+  geom_point() + geom_smooth(method = "lm", se = TRUE) 
+
+
+
+biomass
+
+modelMat
+model = lm(powerRatio ~ nvdi, data = modelMat)
+summary(model)
+
+
+
+
+test1 = dataSf[1:5000,]
+test2 = dataSf[5000:nrow(dataSf),]
+
+near = st_nearest_feature(test1, test2)
+
+
+test1 
+test2[near,]
+
+
+
+
+co <- st_coordinates(st_centroid(biomass))
+# add lat, lon
+biomass_latlon <- biomass %>%
+  mutate(lon = co[, 1],
+         lat = co[, 2])
+
+
+start = Sys.time()
+
+near = st_nearest_feature(dataSf, biomass_latlon)
+
+
+end = Sys.time()
+
+
+end - start
+```
+
+```{r}
+
+ modelMat = data.frame(powerRatio = data[intersection$row.id, "powerRatio"],
+            nvdi = biomass$biomass_ndvi.tiff[intersection$col.id])
+# 
+# modelMat %>% 
+#   ggplot(aes(x = nvdi, y = powerRatio)) +
+#   geom_point() + geom_smooth(method = "lm", se = TRUE) 
+
+lm(powerRatio ~ nvdi, data = modelMat) %>% 
+  summary()
+
+
+ modelMat = data.frame(powerRatio = dataSf$powerRatio,
+          nvdi = biomass$biomass_ndvi.tiff[near])
+# 
+# modelMat %>% 
+#   ggplot(aes(x = nvdi, y = powerRatio)) +
+#   geom_point() + geom_smooth(method = "lm", se = TRUE)
+
+lm(powerRatio ~ nvdi, data = modelMat) %>% 
+  summary()
+
+```
+
+```{r}
+
+data %>% 
+  ggplot(aes(x = panels, y = power)) +
+  scale_y_log10() +
+  scale_x_log10() +
+  geom_point()
+
+data %>% 
+  filter(landscape.area > 130)
+
+
+p = data %>% 
+  ggplot(aes(x = panels, y = panel.area)) +
+  geom_point()
+
+ggplotly(p)
+
+data %>%
+  ggplot(aes(x = landscape.area, y = panel.area)) +
+  geom_point()
+
+p = data %>% 
+  mutate(panels = log(panels)) %>% 
+  ggplot(aes(x = panel.area, y = power, col = panels)) +
+  scale_colour_viridis_c() +
+  geom_point()
+
+ggplotly(p)
+
+
+
+
+
+data %>%  filter(power > 2000)
+
+data %>% 
+  arrange(desc(power))
+```
+
+```{r}
+biomassClean = read_csv("data/parsed_datafiles/biomass_ndvi.parsed.csv")
+slopeClean = read_csv("data/parsed_datafiles/slope.parsed.csv")
+solarClean = read_csv("data/parsed_datafiles/solar_potential.parsed.csv")
+
+uniqueBio = biomassClean %>% 
+  unique()
+
+filterBio = uniqueBio %>% 
+  filter(biomas != Na)
+
+biomassClean
+slopeClean
+solarClean
+
+
+biomassClean$lon
+slopeClean$lon
+
+
+(biomassClean$lon == slopeClean$lon) %>% table()
+
+slopeClean %>% 
+  ggplot(aes(x = lat, y = lon, col = slope)) +
+  geom_point()
+```
+
+```{r}
+baseRaster = raster(ncols = 3600, nrows = 1800,
+                    xmn = -180, xmx = 180,
+                    ymn = -90, ymx = 90)
+
+baseRaster = rast(baseRaster)
+baseRaster$id = 1:(nrow(baseRaster)*ncol(baseRaster))
+baseRasterXY = xyFromCell(baseRaster, 1:ncell(baseRaster)) %>% 
+  data.frame() %>% 
+  mutate(id = 1:ncell(baseRaster))
+
+# 
+# rawSlope = rast("data/gmtedSlope.tif")
+# 
+# slope_resample = resample(rawSlope, baseRaster, method = "bilinear")
+# 
+# slopeXY = as.data.frame(slope_resample, xy = TRUE, na.rm = FALSE) %>% 
+#   mutate(id = 1:ncell(slope_resample))
+
+```
+
+
+
+```{r}
+
+baseRasterSf = st_as_sf(baseRasterXY, coords = c("x", "y"), crs = 4326)
+
+solarIntersection = st_nearest_feature(solarSf, baseRasterSf)
+
+
+saveRDS(solarIntersection, "data/solarIntersection.rds")
+```
+
+
+```{r}
+solarIntersection <- readRDS("/datathon/data/solarIntersection.rds")
+covariates = read_csv("/datathon/data/parsed_datafiles/covariates_full.csv")
+
+solarData$id = solarIntersection
+
+solarSub = solarData %>% 
+  dplyr::select(id, powerRatio)
+
+
+full_dat = covariates %>% 
+  dplyr::select(id, x, y, biomass_ndvi, slope, PVOUT) %>% 
+  left_join(solarSub, by = join_by(id))
+
+modelMat = full_dat %>% 
+  filter(!is.na(powerRatio)) %>% 
+  na.omit()
+
+fit = lm(powerRatio ~ biomass_ndvi + slope + PVOUT + x + y, data = modelMat)
+summary(fit)
+
+
+save(fit, modelMat, file = "/datathon/train_data.rdata")
+
+set.seed(2023)
+results = caret::train(formula(fit),
+             data = modelMat,
+             method = "rf",
+             trControl = trainControl(method = "repeatedcv",
+                                      number = 10,
+                                      repeats = 10))
+
+
+
+summary(results$finalModel)
+
+
+plot(results$finalModel)
+
+#saveRDS(results, "/datathon/results/resultsGAM.rds")
+```
+
+```{r}
+biomassDat = read_csv("/datathon/data/parsed_datafiles/biomass_ndvi.csv") %>% na.omit() 
+pvDat = read_csv("/datathon/data/parsed_datafiles/PVOUT.csv") %>% na.omit() 
+slopeDat = read_csv("/datathon/data/parsed_datafiles/gmtedSlope.csv") %>% na.omit() %>% 
+  filter(slope != 0)
+demandDat = read_csv("/datathon/data/parsed_datafiles/demand.csv") %>% na.omit() 
+nightDat = read_csv("/datathon/data/parsed_datafiles/night-light.csv") %>% na.omit()
+popDat = read_csv("/datathon/data/parsed_datafiles/populationDen.csv") %>% na.omit() 
+predDat = read_csv("/datathon/data/parsed_datafiles/predictions.csv") %>% na.omit() 
+
+
+world = ne_countries(scale = "small", returnclass = "sf")
+```
+
+
+```{r}
+biomassPlot = ggplot() +
+  geom_tile(data = biomassDat, aes(x = x, y = y, fill = biomass_ndvi)) +
+  scale_fill_gradient2(low = "black", mid = "beige", high = "darkgreen") +
+  geom_sf(data = world, aes(x = NULL, y = NULL, geometry = geometry), fill = NA, col ="black") +
+  geom_sf_text(data = world, aes(label = gu_a3), size = 2, check_overlap = TRUE) +
+  xlim(-180, 180) +
+  ylim(-90, 90) +
+  labs(fill = "Biomass (NDVI)") +
+  theme_classic()
+
+
+pvPlot = ggplot() +
+  geom_tile(data=pvDat, aes(x = x, y = y, fill = PVOUT)) +
+  scale_fill_viridis_c(option = "inferno") +
+  geom_sf(data = world, aes(x = NULL, y = NULL, geometry = geometry), fill = NA, col ="black") +
+  geom_sf_text(data = world, aes(label = gu_a3), size = 2, check_overlap = TRUE) +
+  xlim(-180, 180) +
+  ylim(-90, 90) +
+  labs(fill = "EV Potential") +
+  theme_classic()
+
+
+slopePlot =  ggplot() +
+  geom_tile(data = slopeDat, aes(x = x, y = y, fill = slope)) +
+  scale_fill_gradientn(colours = c("#28B400", "#E6E600", "#E7D217", "#E8C32E",  "#EBB25E", "#E9B846", "#ECB176", "#EDB48E")) +
+  geom_sf(data = world, aes(x = NULL, y = NULL, geometry = geometry), fill = NA, col ="black") +
+  geom_sf_text(data = world, aes(label = gu_a3), size = 2, check_overlap = TRUE) +
+  xlim(-180, 180) +
+  ylim(-90, 90) +
+  labs(fill = "Slope") +
+  theme_classic()
+
+
+demandPlot = 
+  ggplot() +
+  geom_tile(data = demandDat, aes(x = x, y = y, fill = demand)) +
+  #scale_fill_viridis_c(option = "F") +
+  scale_fill_gradientn(colours = c("darkblue", "#ECD556", "red")) +
+  geom_sf(data = world, aes(x = NULL, y = NULL, geometry = geometry), fill = NA, col ="black") +
+  geom_sf_text(data = world, aes(label = gu_a3), size = 2, check_overlap = TRUE, col = "black") +
+  xlim(-180, 180) +
+  ylim(-90, 90) +
+  labs(fill = "Energy \nAccessibility Gap") +
+  theme_classic()
+
+
+nightPlot = 
+  ggplot() +
+  geom_tile(data = nightDat, aes(x = x, y = y, fill = `night-light_1`)) +
+  #scale_fill_viridis_c(option = "E") +
+  scale_fill_gradientn(colours = c("#213368", "#958F79", "#BCB16F", "#ECD556", "#FDEB47")) +
+  geom_sf(data = world, aes(x = NULL, y = NULL, geometry = geometry), fill = NA, col ="black") +
+  geom_sf_text(data = world, aes(label = gu_a3), size = 2, check_overlap = TRUE, col = "beige") +
+  xlim(-180, 180) +
+  ylim(-90, 90) +
+  labs(fill = "Night Light") +
+  theme_classic()
+
+
+
+popPlot = 
+  ggplot() +
+  geom_tile(data = popDat, aes(x = x, y = y, fill = `vis-gray`)) +
+  scale_fill_viridis_c(option = "E") +
+  geom_sf(data = world, aes(x = NULL, y = NULL, geometry = geometry), fill = NA, col ="black") +
+  geom_sf_text(data = world, aes(label = gu_a3), size = 2, check_overlap = TRUE, col = "beige") +
+  xlim(-180, 180) +
+  ylim(-90, 90) +
+  labs(fill = "Population Density") +
+  theme_classic()
+
+
+predPlot = 
+  ggplot() +
+  geom_tile(data = predDat, aes(x = x, y = y, fill = `pred`)) +
+  scale_fill_viridis_c(option = "G") +
+  geom_sf(data = world, aes(x = NULL, y = NULL, geometry = geometry), fill = NA, col ="black") +
+  geom_sf_text(data = world, aes(label = gu_a3), size = 2, check_overlap = TRUE, col = "beige") +
+  xlim(-180, 180) +
+  ylim(-90, 90) +
+  labs(fill = "Power Ratio") +
+  theme_classic()
+
+
+biomassPlot
+pvPlot
+slopePlot
+demandPlot
+nightPlot
+popPlot
+predPlot
+```
+
+```{r}
+solarPlot = solarSf %>% 
+  ggplot() +
+  geom_sf(data = world, aes(x = NULL, y = NULL, geometry = geometry), fill = "beige", col ="black") +
+  geom_sf(aes(geometry = geometry), size = 0.5, col = "#2190ff") +
+  geom_sf_text(data = world, aes(label = gu_a3), size = 2, check_overlap = TRUE, col = "black") +
+  theme_classic()
+
+
+
+```
+
+
+```{r}
+
+
+
+ggsave("/datathon/repo/staticMaps/biomass.png", biomassPlot,  height = 10, width = 20, dpi = 1000)
+ggsave("/datathon/repo/staticMaps/pv.png", pvPlot, height = 10, width = 20, dpi = 1000)
+ggsave("/datathon/repo/staticMaps/slope.png", slopePlot, height = 10, width = 20, dpi = 1000)
+ggsave("/datathon/repo/staticMaps/demand.png", demandPlot, height = 10, width = 20, dpi = 1000)
+ggsave("/datathon/repo/staticMaps/night.png", nightPlot, height = 10, width = 20, dpi = 1000)
+ggsave("/datathon/repo/staticMaps/pop.png", popPlot, height = 10, width = 20, dpi = 1000)
+ggsave("/datathon/repo/staticMaps/pred.png", predPlot, height = 10, width = 20, dpi = 1000)
+
+
+ggsave("/datathon/repo/staticMaps/solarPlot.png", solarPlot, height = 10, width = 20, dpi = 1000)
+
+```
+
+
+```{r}
+
+  setMaxBounds(lng1 = -180, lng2 = 180, lat1 = -90, lat2 = 90) %>% 
+  setView(lng = 0, lat = 0, zoom = 2)
+
+world_simple <- world %>% 
+  st_make_valid() %>% 
+  st_simplify( dTolerance = 0.01)
+
+world = ne_countries(scale = "small", returnclass = "sf")
+sf_use_s2(FALSE)
+
+world_centroids = world %>% 
+  st_centroids()
+
+slopeRaster = covariates %>% 
+  dplyr::select(x, y, slope) %>% 
+  na.omit() %>% 
+  filter(slope != 0) %>% 
+  rasterFromXYZ(crs = CRS("+proj=longlat +datum=WGS84"))
+
+leaflet() %>%
+  #addTiles(options = leafletOptions(noWrap = TRUE)) %>%
+  addPolygons(data = world, weight = 1, fillOpacity = 0, col = "black",
+              options = leafletOptions(noWrap = TRUE)) %>%
+  addRasterImage(slopeRaster,
+                 colors = colorNumeric(c("beige", "darkgreen"),
+                                       values(slopeRaster),
+                                       na.color = "transparent"), opacity = 0.8) 
+  addMarkers(world_centroids,
+             lng = ~st_coordinates(world_centroids)[,1],
+             lat = ~st_coordinates(world_centroids)[,2],
+             popup = ~name_long,
+             labelOptions = labelOptions(noHide = TRUE, direction = 'auto'))
+
+
+```
+
+
+
+
+
+```{r}
+
+
+
+full_predict = predict(resultsRANGER, full_dat)
+full_predict %>% length()
+full_dat$pred = full_predict
+
+na_data = full_dat %>% 
+  dplyr::select(-powerRatio) %>% 
+  na.omit()
+
+na_data %>% 
+ggplot(aes(x = x, y =y, col = pred)) +
+  geom_point(size = 0.5)
+
+
+
+```
+
+
+```{r}
+
+
+data = full_dat
+
+coordinates(data) <- ~y+x
+
+proj4string(data) <- CRS("+proj=longlat +datum=WGS84")
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
